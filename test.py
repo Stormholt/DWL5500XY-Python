@@ -1,7 +1,6 @@
 #Test script using most aspects of the DWL5500XY module.
 
-import DWL5500XY # import custom module.
-
+import DWL5500XY
 
 sc = DWL5500XY.TiltSensor()
 try:
