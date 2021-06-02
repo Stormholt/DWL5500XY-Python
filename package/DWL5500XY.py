@@ -37,6 +37,7 @@ class TiltSensor(object):
         self.conn = None
         self.debuginfo = print_debug_info
         self.single_val = 0.0
+        self.alt_single_val = 0.0
         self.dual_xval = 0.0
         self.dual_yval = 0.0
         self.alt_dual_xval = 0.0
@@ -114,13 +115,18 @@ class TiltSensor(object):
         self.last_response = response
 
         if len(response) == self.EXPECTED_BYTES:
-            if response[1] == self.SINGLE_STANDMODE and self.mode == self.SINGLE_MODE:  # Single mode and stand confirmed
+            if response[1] == self.SINGLE_STANDMODE and (self.mode == self.SINGLE_MODE or self.mode == self.ALT_SINGLE_MODE) :  # Single mode and stand confirmed
                 self.single_val = (((int)(response[5]) << 24)) + (
                     ((int)(response[4]) << 16)) + ((int)(response[3] << 8) + response[2])
                 self.single_val = ((float)(
                     self.single_val - 18000000)) / 100000
-                print("{:.3f}".format(self.single_val) + self.degree_symbol)    
-                return "{:.3f}".format(self.single_val) + self.degree_symbol
+
+                if self.mode == self.ALT_SINGLE_MODE:
+                    #print("{:.3f}".format(self.single_val + ((-1)*self.alt_single_val)) + self.degree_symbol)   
+                    return "{:.3f}".format(self.single_val ((-1)*self.alt_single_val)) + self.degree_symbol
+                else:
+                    #print("{:.3f}".format(self.single_val) + self.degree_symbol)   
+                    return "{:.3f}".format(self.single_val) + self.degree_symbol
 
             elif response[1] == self.DUAL_STANDMODE and (self.mode == self.DUAL_MODE or self.mode == self.ALT_DUAL_MODE)   :
                 self.dual_xval = (
@@ -130,11 +136,11 @@ class TiltSensor(object):
                 self.dual_yval = (
                     ((int)(response[4]) << 16)) + ((int)(response[3] << 8) + response[2])
                 self.dual_yval = ((float)(self.dual_yval - 3000000)) / 100000
-                if self.mode == self.DUAL_MODE:
-                    print("X" + "{:.3f}".format(self.dual_xval + ((-1) * self.alt_dual_xval ))  + self.degree_symbol + " Y" +  "{:.3f}".format(self.dual_yval + ((-1) * self.alt_dual_yval )) + self.degree_symbol)
-                    return "X" + "{:.3f}".format(self.dual_xval) + self.degree_symbol + " Y" + "{:.3f}".format(self.dual_yval) + self.degree_symbol
+                if self.mode == self.ALT_DUAL_MODE:
+                    #print("X" + "{:.3f}".format(self.dual_xval + ((-1) * self.alt_dual_xval ))  + self.degree_symbol + " Y" +  "{:.3f}".format(self.dual_yval + ((-1) * self.alt_dual_yval )) + self.degree_symbol)
+                    return "X" + "{:.3f}".format(self.dual_xval + ((-1) * self.alt_dual_xval )) + self.degree_symbol + " Y" + "{:.3f}".format(self.dual_yval + ((-1) * self.alt_dual_yval )) + self.degree_symbol
                 else:
-                    print("X" + "{:.3f}".format(self.dual_xval)  + self.degree_symbol + " Y" +  "{:.3f}".format(self.dual_yval) + self.degree_symbol)
+                    #print("X" + "{:.3f}".format(self.dual_xval)  + self.degree_symbol + " Y" +  "{:.3f}".format(self.dual_yval) + self.degree_symbol)
                     return "X" + "{:.3f}".format(self.dual_xval) + self.degree_symbol + " Y" + "{:.3f}".format(self.dual_yval) + self.degree_symbol
 
             elif (response[1] == self.VIBRO_SINGLE_STANDMODE or response[1] == self.VIBRO_DUAL_STANDMORE) and self.mode == self.VIBRO_MODE: # Vibration stand and mode
@@ -151,7 +157,7 @@ class TiltSensor(object):
                 print("Inclination sensor error: In dual mode, but in single stand")
                 return None
             else:
-                print("Unknown response read")
+                print("Unknown response read:")
                 print(response)
                 return None 
                 #return self.read_response() # This can be used when changing mode freqeuntly
@@ -161,18 +167,23 @@ class TiltSensor(object):
             return None
 
     def set_alternate_zero_singleaxis(self):
-        outbuffer = [self.COMPUTER, self.DEVICE, self.ALT_SINGLE_MODE,
-                     self.SET_ALT_ZERO, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-        outbuffer = bytearray(outbuffer)
-        self.conn.write(outbuffer)
-        print("Alternate zero for single axis mode is set")
+        self.mode = self.ALT_SINGLE_MODE
+        self.alt_dual_xval = self.dual_xval
+        self.alt_dual_yval = self.dual_yval
+#        outbuffer = [self.COMPUTER, self.DEVICE, self.ALT_SINGLE_MODE,
+#                     self.SET_ALT_ZERO, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+#        outbuffer = bytearray(outbuffer)
+#        self.conn.write(outbuffer)
+#        print("Alternate zero for single axis mode is set")
 
     def reset_alternate_zero_singleaxis(self):
-        outbuffer = [self.COMPUTER, self.DEVICE, self.ALT_SINGLE_MODE,
-                     self.RESET_ALT_ZERO, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-        outbuffer = bytearray(outbuffer)
-        self.conn.write(outbuffer)
-        print("Alternate zero for single axis mode is reset")
+        self.mode = self.SINGLE_MODE
+
+#        outbuffer = [self.COMPUTER, self.DEVICE, self.ALT_SINGLE_MODE,
+#                     self.RESET_ALT_ZERO, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+#        outbuffer = bytearray(outbuffer)
+#        self.conn.write(outbuffer)
+#        print("Alternate zero for single axis mode is reset")
 
     def set_alternate_zero_dualaxis(self):
         self.mode = self.ALT_DUAL_MODE
